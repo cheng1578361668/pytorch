@@ -186,11 +186,15 @@ class OptimizerVariable(UserDefinedObjectVariable):
         # We only set capturable if params are on cuda
         # and the state is not initialized
         def safe_to_set_capturable(group: dict[str, Any]) -> bool:
+            # 延迟导入，避免模块加载顺序问题
+            from torch.optim.optimizer import _get_capturable_supported_devices
+
+            capturable_devices = _get_capturable_supported_devices()
             all_uninitialized = True
             all_gpu = True
 
             for p in group.get("params", []):
-                all_gpu &= p.is_cuda or p.is_xpu
+                all_gpu &= p.device.type in capturable_devices
                 all_uninitialized &= p not in self.value.state
 
             return "capturable" in group and all_uninitialized and all_gpu
